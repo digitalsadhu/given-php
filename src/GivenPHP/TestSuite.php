@@ -4,6 +4,7 @@ namespace GivenPHP;
 
 use Closure;
 use Exception;
+use UnexpectedValueException;
 
 /**
  * Class TestSuite
@@ -57,6 +58,13 @@ class TestSuite
     private $current_callback;
 
     /**
+     * The last error that occured in the tests
+     *
+     * @var object $last_error
+     */
+    private $last_error;
+
+    /**
      * Constructor
      *
      * @param string $description
@@ -90,8 +98,19 @@ class TestSuite
     }
 
     /**
+     * @param $param
+     *
+     * @return bool
+     */
+    public function failsWith($param)
+    {
+        return $this->last_error instanceof $param;
+    }
+
+    /**
      * Run every actions registered by when for this test
      *
+     * @throws \UnexpectedValueException
      * @return void
      */
     private function execute_actions()
@@ -99,7 +118,7 @@ class TestSuite
         foreach ($this->actions AS $key => $action) {
             $result = $this->execute_callback($action);
             if (is_string($key)) {
-                $this->parsed_data[$key] = $result;
+                $this->addParsedValue($key, $result);
             }
         }
     }
@@ -137,9 +156,16 @@ class TestSuite
      * @param string  $name
      * @param mixed   $value
      * @param boolean $is_parsed
+     *
+     * @return void
+     * @throws \UnexpectedValueException
      */
     public function add_value($name, $value, $is_parsed)
     {
+        if ($name === 'that') {
+            throw new UnexpectedValueException('The key `that` is not allowed for custom values');
+        }
+
         $this->data[$name] = $value;
 
         if (isset($this->parsed_data[$name])) {
@@ -156,15 +182,20 @@ class TestSuite
      *
      * @param string $name
      *
+     * @throws \UnexpectedValueException
      * @return mixed
      */
     public function &get_value($name)
     {
+        if ($name === 'that') {
+            return $this;
+        }
+
         if (!isset($this->parsed_data[$name])) {
             if ($this->data[$name] instanceof Closure) {
-                $this->parsed_data[$name] = $this->execute_callback($this->data[$name]);
+                $this->addParsedValue($name, $this->execute_callback($this->data[$name]));
             } else {
-                $this->parsed_data[$name] = $this->data[$name];
+                $this->addParsedValue($name, $this->data[$name]);
             }
         }
 
@@ -194,5 +225,21 @@ class TestSuite
     public function description()
     {
         return $this->description;
+    }
+
+    /**
+     * @param $key
+     * @param $value
+     *
+     * @return void
+     * @throws \UnexpectedValueException
+     */
+    private function addParsedValue($key, $value)
+    {
+        if ($key === 'that') {
+            throw new UnexpectedValueException('The key `that` is not allowed for custom values');
+        }
+
+        $this->parsed_data[$key] = $value;
     }
 }

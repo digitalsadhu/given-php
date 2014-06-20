@@ -1,5 +1,8 @@
 <?php
 
+use GivenPHP\TestSuite;
+use Mockery\CountValidator\Exception;
+
 describe('Natural assertions', function () {
     given('true', true);
     given('empty', [ ]);
@@ -46,6 +49,16 @@ describe('Natural assertions', function () {
     context('isolated', function () {
         then(function ($empty) {
             return empty($empty);
+        });
+    });
+
+    context('handling errors', function() {
+        when(function() {
+            throw new Exception;
+        });
+
+        then(function(TestSuite $that) {
+            return $that->failsWith('Exception');
         });
     });
 });
